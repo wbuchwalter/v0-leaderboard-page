@@ -53,11 +53,14 @@ export function PerformanceComparison() {
     let currentScore = 0
     let currentTACScores: TACScore[] = []
     let inScoresSection = false
+    let inModelSection = false
 
     for (let i = 0; i < lines.length; i++) {
-      const line = lines[i].trim()
+      const line = lines[i]
+      const trimmedLine = line.trim()
 
-      if (line.startsWith("model:")) {
+      if (trimmedLine === "model:") {
+        // Save previous model if it exists
         if (currentModel && !isNaN(currentScore)) {
           results.push({
             name: currentModel,
@@ -66,27 +69,34 @@ export function PerformanceComparison() {
           })
         }
 
-        currentModel = line.replace("model:", "").trim()
+        // Reset for new model
+        currentModel = ""
         currentScore = 0
         currentTACScores = []
         inScoresSection = false
-      } else if (line.startsWith("average_score:")) {
-        currentScore = Number.parseFloat(line.replace("average_score:", "").trim())
-      } else if (line.startsWith("scores:")) {
+        inModelSection = true
+      } else if (inModelSection && trimmedLine.startsWith("name:")) {
+        currentModel = trimmedLine.replace("name:", "").trim()
+      } else if (inModelSection && trimmedLine.startsWith("average_score:")) {
+        currentScore = Number.parseFloat(trimmedLine.replace("average_score:", "").trim())
+      } else if (inModelSection && trimmedLine.startsWith("scores:")) {
         inScoresSection = true
-      } else if (inScoresSection && line.startsWith("- TAC-")) {
-        const tacMatch = line.match(/- (TAC-\d+):\s*([0-9.]+)/)
+      } else if (inScoresSection && trimmedLine.startsWith("- TAC-")) {
+        const tacMatch = trimmedLine.match(/- (TAC-\d+):\s*([0-9.]+)/)
         if (tacMatch) {
           currentTACScores.push({
             name: tacMatch[1],
             score: Number.parseFloat(tacMatch[2]),
           })
         }
-      } else if (line === "" || (!line.startsWith("-") && !line.startsWith(" "))) {
+      } else if (trimmedLine === "" && inModelSection) {
+        // End of current model section
+        inModelSection = false
         inScoresSection = false
       }
     }
 
+    // Don't forget the last model
     if (currentModel && !isNaN(currentScore)) {
       results.push({
         name: currentModel,
