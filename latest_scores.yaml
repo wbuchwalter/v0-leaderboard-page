@@ -88,3 +88,21 @@ model:
   - TAC-113: 0.9
   - TAC-103: 0.684
   - TAC-94: 1.0
+model:
+  average_score: 27.461
+  name: gemini-2.5-flash-lite
+  scores:
+  - TAC-522: 0.1
+  - TAC-505: 0.0
+  - TAC-432: 0.0
+  - TAC-365: 0.0
+  - TAC-269: 0.056
+  - TAC-223: 0.0
+  - TAC-222: 0.2
+  - TAC-132: 0.16
+  - TAC-127: 0.2
+  - TAC-124: 0.4
+  - TAC-123: 0.8
+  - TAC-113: 0.5
+  - TAC-103: 0.579
+  - TAC-94: 0.85
