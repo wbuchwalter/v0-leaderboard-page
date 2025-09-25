@@ -125,7 +125,7 @@ export function PerformanceComparison() {
         setError(null)
 
         const response = await fetch(
-          "https://gist.githubusercontent.com/wbuchwalter/563d87cb1788eebc22a67f11a0bddf94/raw/ac998de676b9608e9e1895b0dca1ef954a4da215/latest_scores.yaml",
+          "https://raw.githubusercontent.com/wbuchwalter/v0-leaderboard-page/refs/heads/main/latest_scores.yaml",
         )
 
         if (!response.ok) {
