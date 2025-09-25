@@ -129,11 +129,6 @@ export function PerformanceComparison() {
           `https://raw.githubusercontent.com/wbuchwalter/v0-leaderboard-page/refs/heads/main/latest_scores.yaml?t=${timestamp}`,
           {
             cache: "no-cache",
-            headers: {
-              "Cache-Control": "no-cache, no-store, must-revalidate",
-              Pragma: "no-cache",
-              Expires: "0",
-            },
           },
         )
 
