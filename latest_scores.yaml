@@ -32,3 +32,22 @@ scores:
  - TAC-113: 0.4
  - TAC-103: 0.3684210526315789
  - TAC-94: 1.0
+model:
+  average_score: 17.184
+  name: claude-3-5-haiku-latest
+  scores:
+  - TAC-522: 0.0
+  - TAC-505: 0.0
+  - TAC-432: 0.0
+  - TAC-365: 0.2
+  - TAC-269: 0.0
+  - TAC-223: 0.0
+  - TAC-222: 0.2
+  - TAC-132: 0.24
+  - TAC-127: 0.2
+  - TAC-124: 0.1
+  - TAC-123: 0.5
+  - TAC-113: 0.5
+  - TAC-103: 0.316
+  - TAC-94: 0.15
+
