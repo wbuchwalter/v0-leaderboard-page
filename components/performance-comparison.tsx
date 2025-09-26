@@ -134,13 +134,9 @@ export function PerformanceComparison() {
         setIsLoading(true)
         setError(null)
 
-        const timestamp = new Date().getTime()
-        const response = await fetch(
-          `https://raw.githubusercontent.com/wbuchwalter/v0-leaderboard-page/refs/heads/main/latest_scores.yaml?t=${timestamp}`,
-          {
-            cache: "no-cache",
-          },
-        )
+        const response = await fetch("/api/scores", {
+          cache: "no-cache",
+        })
 
         if (!response.ok) {
           throw new Error(`Failed to fetch data: ${response.status}`)
