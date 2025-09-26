@@ -49,9 +49,7 @@ export function PerformanceComparison() {
     const results: { name: string; score: number; tacScores: TACScore[] }[] = []
 
     const lines = yamlText.split("\n")
-    let currentModel = ""
-    let currentScore = 0
-    let currentTACScores: TACScore[] = []
+    let currentModel: { name?: string; score?: number; tacScores: TACScore[] } = { tacScores: [] }
     let inScoresSection = false
     let inModelSection = false
 
@@ -59,49 +57,65 @@ export function PerformanceComparison() {
       const line = lines[i]
       const trimmedLine = line.trim()
 
-      if (trimmedLine === "model:") {
-        // Save previous model if it exists
-        if (currentModel && !isNaN(currentScore)) {
+      // Skip the top-level "models:" line
+      if (trimmedLine === "models:") {
+        continue
+      }
+
+      // Detect start of new model (any line starting with "- " that's not a TAC score)
+      if (trimmedLine.startsWith("- ") && !trimmedLine.includes("TAC-")) {
+        // Save previous model if it has both name and score
+        if (currentModel.name && currentModel.score !== undefined) {
           results.push({
-            name: currentModel,
-            score: currentScore,
-            tacScores: [...currentTACScores],
+            name: currentModel.name,
+            score: currentModel.score,
+            tacScores: [...currentModel.tacScores],
           })
         }
 
         // Reset for new model
-        currentModel = ""
-        currentScore = 0
-        currentTACScores = []
+        currentModel = { tacScores: [] }
         inScoresSection = false
         inModelSection = true
-      } else if (inModelSection && trimmedLine.startsWith("name:")) {
-        currentModel = trimmedLine.replace("name:", "").trim()
+
+        // Parse the current field (could be average_score, name, etc.)
+        if (trimmedLine.startsWith("- average_score:")) {
+          currentModel.score = Number.parseFloat(trimmedLine.replace("- average_score:", "").trim())
+        } else if (trimmedLine.startsWith("- name:")) {
+          currentModel.name = trimmedLine.replace("- name:", "").trim()
+        }
       } else if (inModelSection && trimmedLine.startsWith("average_score:")) {
-        currentScore = Number.parseFloat(trimmedLine.replace("average_score:", "").trim())
+        currentModel.score = Number.parseFloat(trimmedLine.replace("average_score:", "").trim())
+      } else if (inModelSection && trimmedLine.startsWith("name:")) {
+        currentModel.name = trimmedLine.replace("name:", "").trim()
       } else if (inModelSection && trimmedLine.startsWith("scores:")) {
         inScoresSection = true
-      } else if (inScoresSection && trimmedLine.startsWith("- TAC-")) {
-        const tacMatch = trimmedLine.match(/- (TAC-\d+):\s*([0-9.]+)/)
+      } else if (inScoresSection && trimmedLine.startsWith("- 'TAC-")) {
+        const tacMatch = trimmedLine.match(/- '(TAC-\d+):\s*([0-9.]+)'/)
         if (tacMatch) {
-          currentTACScores.push({
+          currentModel.tacScores.push({
             name: tacMatch[1],
             score: Number.parseFloat(tacMatch[2]),
           })
         }
-      } else if (trimmedLine === "" && inModelSection) {
-        // End of current model section
-        inModelSection = false
-        inScoresSection = false
+      } else if (inScoresSection && trimmedLine.startsWith("- TAC-")) {
+        // Handle unquoted TAC scores format
+        const tacMatch = trimmedLine.match(/- (TAC-\d+):\s*([0-9.]+)/)
+        if (tacMatch) {
+          currentModel.tacScores.push({
+            name: tacMatch[1],
+            score: Number.parseFloat(tacMatch[2]),
+          })
+        }
       }
     }
 
     // Don't forget the last model
-    if (currentModel && !isNaN(currentScore)) {
+    if (currentModel.name && currentModel.score !== undefined) {
       results.push({
-        name: currentModel,
-        score: currentScore,
-        tacScores: [...currentTACScores],
+        name: currentModel.name,
+        score: currentModel.score,
+        tacScores: [...currentModel.tacScores],
       })
     }
 
@@ -134,9 +148,13 @@ export function PerformanceComparison() {
         setIsLoading(true)
         setError(null)
 
-        const response = await fetch("/api/scores", {
-          cache: "no-cache",
-        })
+        const timestamp = Date.now()
+        const response = await fetch(
+          `https://pub-d29d89e1f30d4e34be99a6673b3ec29a.r2.dev/latest_scores.yaml?t=${timestamp}`,
+          {
+            cache: "no-cache",
+          },
+        )
 
         if (!response.ok) {
           throw new Error(`Failed to fetch data: ${response.status}`)
