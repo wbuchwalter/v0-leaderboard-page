@@ -389,7 +389,7 @@ scores:
                     <div
                       className={`h-2 rounded-full ${model.color} transition-all duration-500`}
                       style={{
-                        width: `${Math.min((model.score / Math.max(...modelResults.map((r) => r.score))) * 100, 100)}%`,
+                        width: `${Math.min(model.score, 100)}%`,
                       }}
                     />
                   </div>
@@ -439,9 +439,6 @@ scores:
       <div className="text-xs text-muted-foreground space-y-2">
         <p>
           <strong>Rankings</strong> are based on average scores from ChemBench-Discovery, sorted from highest to lowest.
-        </p>
-        <p>
-          <strong>Progress bars</strong> are scaled relative to the highest score in the dataset.
         </p>
         <p>
           <strong>Click on any model</strong> to expand and view individual TAC test scores.
