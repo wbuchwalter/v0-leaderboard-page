@@ -385,7 +385,7 @@ scores:
                     <span className="text-foreground font-mono text-sm ml-4">{model.score.toFixed(2)}</span>
                   </div>
 
-                  <div className="mt-2 w-full bg-muted rounded-full h-2">
+                  <div className="mt-2 w-full bg-gray-500 dark:bg-gray-800 rounded-full h-2">
                     <div
                       className={`h-2 rounded-full ${model.color} transition-all duration-500`}
                       style={{
@@ -409,7 +409,7 @@ scores:
                           {tac.error && tac.error !== "null" ? (
                             <div className="text-red-400 text-xs font-medium">{tac.error}</div>
                           ) : (
-                            <div className="w-full bg-muted rounded-full h-1.5">
+                            <div className="w-full bg-gray-500 dark:bg-gray-800 rounded-full h-1.5">
                               <div
                                 className={`h-1.5 rounded-full ${model.color} transition-all duration-300`}
                                 style={{
