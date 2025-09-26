@@ -9,6 +9,7 @@ import { Upload, Loader2, ChevronDown, ChevronRight } from "lucide-react"
 interface TACScore {
   name: string
   score: number
+  error?: string | null
 }
 
 interface ModelResult {
@@ -52,6 +53,9 @@ export function PerformanceComparison() {
     let currentModel: { name?: string; score?: number; tacScores: TACScore[] } = { tacScores: [] }
     let inScoresSection = false
     let inModelSection = false
+    let currentTACName: string | null = null
+    let currentTACScore: number | null = null
+    let currentTACError: string | null = null
 
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i]
@@ -77,6 +81,9 @@ export function PerformanceComparison() {
         currentModel = { tacScores: [] }
         inScoresSection = false
         inModelSection = true
+        currentTACName = null
+        currentTACScore = null
+        currentTACError = null
 
         // Parse the current field (could be average_score, name, etc.)
         if (trimmedLine.startsWith("- average_score:")) {
@@ -90,27 +97,54 @@ export function PerformanceComparison() {
         currentModel.name = trimmedLine.replace("name:", "").trim()
       } else if (inModelSection && trimmedLine.startsWith("scores:")) {
         inScoresSection = true
+      } else if (inScoresSection && trimmedLine.match(/^TAC-\d+:$/)) {
+        // Save previous TAC score if we have one
+        if (currentTACName && currentTACScore !== null) {
+          currentModel.tacScores.push({
+            name: currentTACName,
+            score: currentTACScore,
+            error: currentTACError,
+          })
+        }
+
+        // Start new TAC entry
+        currentTACName = trimmedLine.replace(":", "")
+        currentTACScore = null
+        currentTACError = null
+      } else if (inScoresSection && currentTACName && trimmedLine.startsWith("error:")) {
+        const errorValue = trimmedLine.replace("error:", "").trim()
+        currentTACError = errorValue === "null" ? null : errorValue
+      } else if (inScoresSection && currentTACName && trimmedLine.startsWith("score:")) {
+        currentTACScore = Number.parseFloat(trimmedLine.replace("score:", "").trim())
       } else if (inScoresSection && trimmedLine.startsWith("- 'TAC-")) {
         const tacMatch = trimmedLine.match(/- '(TAC-\d+):\s*([0-9.]+)'/)
         if (tacMatch) {
           currentModel.tacScores.push({
             name: tacMatch[1],
             score: Number.parseFloat(tacMatch[2]),
+            error: null,
           })
         }
       } else if (inScoresSection && trimmedLine.startsWith("- TAC-")) {
-        // Handle unquoted TAC scores format
         const tacMatch = trimmedLine.match(/- (TAC-\d+):\s*([0-9.]+)/)
         if (tacMatch) {
           currentModel.tacScores.push({
             name: tacMatch[1],
             score: Number.parseFloat(tacMatch[2]),
+            error: null,
           })
         }
       }
     }
 
-    // Don't forget the last model
+    if (currentTACName && currentTACScore !== null) {
+      currentModel.tacScores.push({
+        name: currentTACName,
+        score: currentTACScore,
+        error: currentTACError,
+      })
+    }
+
     if (currentModel.name && currentModel.score !== undefined) {
       results.push({
         name: currentModel.name,
@@ -372,17 +406,25 @@ scores:
                           <span className="text-xs font-mono text-muted-foreground">{tac.name}</span>
                         </div>
                         <div className="flex-1">
-                          <div className="w-full bg-muted rounded-full h-1.5">
-                            <div
-                              className={`h-1.5 rounded-full ${model.color} transition-all duration-300`}
-                              style={{
-                                width: `${Math.min(tac.score * 100, 100)}%`,
-                              }}
-                            />
-                          </div>
+                          {tac.error && tac.error !== "null" ? (
+                            <div className="text-red-400 text-xs font-medium">{tac.error}</div>
+                          ) : (
+                            <div className="w-full bg-muted rounded-full h-1.5">
+                              <div
+                                className={`h-1.5 rounded-full ${model.color} transition-all duration-300`}
+                                style={{
+                                  width: `${Math.min(tac.score * 100, 100)}%`,
+                                }}
+                              />
+                            </div>
+                          )}
                         </div>
                         <div className="w-12 flex-shrink-0 text-right">
-                          <span className="text-xs font-mono text-foreground">{tac.score.toFixed(2)}</span>
+                          {tac.error && tac.error !== "null" ? (
+                            <span className="text-xs font-mono text-red-400">--</span>
+                          ) : (
+                            <span className="text-xs font-mono text-foreground">{tac.score.toFixed(2)}</span>
+                          )}
                         </div>
                       </div>
                     ))}
