@@ -3,6 +3,8 @@
 import type React from "react"
 
 import { Card } from "@/components/ui/card"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Badge } from "@/components/ui/badge"
 import { useState, useCallback, useEffect } from "react"
 import { Upload, Loader2, ChevronDown, ChevronRight } from "lucide-react"
 
@@ -18,6 +20,14 @@ interface ModelResult {
   score: number
   color: string
   tacScores: TACScore[]
+}
+
+interface QuestionStats {
+  name: string
+  correctCount: number
+  totalCount: number
+  percentage: number
+  modelResults: Array<{ modelName: string; success: boolean }>
 }
 
 const colors = [
@@ -174,6 +184,48 @@ export function PerformanceComparison() {
       }
       return newSet
     })
+  }, [])
+
+  const computeQuestionStats = useCallback((models: ModelResult[]): QuestionStats[] => {
+    const questionMap = new Map<
+      string,
+      { correct: number; total: number; modelResults: Array<{ modelName: string; success: boolean }> }
+    >()
+
+    // Aggregate TAC scores across all models
+    models.forEach((model) => {
+      model.tacScores.forEach((tac) => {
+        if (!questionMap.has(tac.name)) {
+          questionMap.set(tac.name, { correct: 0, total: 0, modelResults: [] })
+        }
+        const stats = questionMap.get(tac.name)!
+        stats.total++
+        // Count as correct if score > 0 and no error
+        const isSuccess = tac.score > 0 && (!tac.error || tac.error === "null")
+        if (isSuccess) {
+          stats.correct++
+        }
+        stats.modelResults.push({ modelName: model.name, success: isSuccess })
+      })
+    })
+
+    // Convert to array and sort by question name
+    const questionStats: QuestionStats[] = Array.from(questionMap.entries())
+      .map(([name, stats]) => ({
+        name,
+        correctCount: stats.correct,
+        totalCount: stats.total,
+        percentage: stats.total > 0 ? (stats.correct / stats.total) * 100 : 0,
+        modelResults: stats.modelResults,
+      }))
+      .sort((a, b) => {
+        // Sort by TAC number
+        const aNum = Number.parseInt(a.name.replace("TAC-", ""))
+        const bNum = Number.parseInt(b.name.replace("TAC-", ""))
+        return aNum - bNum
+      })
+
+    return questionStats
   }, [])
 
   useEffect(() => {
@@ -357,93 +409,155 @@ scores:
     )
   }
 
+  const questionStats = computeQuestionStats(modelResults)
+
   return (
     <div className="space-y-6">
-      <div className="space-y-2">
-        {modelResults.map((model) => {
-          const isExpanded = expandedModels.has(model.name)
-          return (
-            <div key={model.rank} className="bg-card/50 rounded-lg border border-border overflow-hidden">
-              <div
-                className="flex items-center space-x-4 p-4 cursor-pointer hover:bg-card/70 transition-colors"
-                onClick={() => toggleModelExpansion(model.name)}
-              >
-                <div className="flex-shrink-0 w-8 h-8 bg-muted rounded-full flex items-center justify-center">
-                  <span className="text-sm font-semibold text-foreground">{model.rank}</span>
-                </div>
+      <Tabs defaultValue="models" className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger value="models">Models</TabsTrigger>
+          <TabsTrigger value="questions">Questions</TabsTrigger>
+        </TabsList>
 
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <span className="text-foreground font-medium truncate">{model.name}</span>
-                      {isExpanded ? (
-                        <ChevronDown className="h-4 w-4 text-muted-foreground" />
-                      ) : (
-                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                      )}
-                    </div>
-                    <span className="text-foreground font-mono text-sm ml-4">{model.score.toFixed(2)}</span>
+        <TabsContent value="models" className="space-y-2 mt-4">
+          {modelResults.map((model) => {
+            const isExpanded = expandedModels.has(model.name)
+            return (
+              <div key={model.rank} className="bg-card/50 rounded-lg border border-border overflow-hidden">
+                <div
+                  className="flex items-center space-x-4 p-4 cursor-pointer hover:bg-card/70 transition-colors"
+                  onClick={() => toggleModelExpansion(model.name)}
+                >
+                  <div className="flex-shrink-0 w-8 h-8 bg-muted rounded-full flex items-center justify-center">
+                    <span className="text-sm font-semibold text-foreground">{model.rank}</span>
                   </div>
 
-                  <div className="mt-2 w-full bg-gray-500 dark:bg-gray-800 rounded-full h-2">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center space-x-2">
+                        <span className="text-foreground font-medium truncate">{model.name}</span>
+                        {isExpanded ? (
+                          <ChevronDown className="h-4 w-4 text-muted-foreground" />
+                        ) : (
+                          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                        )}
+                      </div>
+                      <span className="text-foreground font-mono text-sm ml-4">{model.score.toFixed(2)}</span>
+                    </div>
+
+                    <div className="mt-2 w-full bg-gray-500 dark:bg-gray-800 rounded-full h-2">
+                      <div
+                        className={`h-2 rounded-full ${model.color} transition-all duration-500`}
+                        style={{
+                          width: `${Math.min(model.score, 100)}%`,
+                        }}
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                {isExpanded && (
+                  <div className="px-4 pb-4 border-t border-border/50">
+                    <div className="pt-4 space-y-3">
+                      <h4 className="text-sm font-medium text-muted-foreground mb-3">Individual TAC Scores</h4>
+                      {model.tacScores.map((tac) => (
+                        <div key={tac.name} className="flex items-center space-x-3">
+                          <div className="w-20 flex-shrink-0">
+                            <span className="text-xs font-mono text-muted-foreground">{tac.name}</span>
+                          </div>
+                          <div className="flex-1">
+                            {tac.error && tac.error !== "null" ? (
+                              <div className="text-red-400 text-xs font-medium">{tac.error}</div>
+                            ) : (
+                              <div className="w-full bg-gray-500 dark:bg-gray-800 rounded-full h-1.5">
+                                <div
+                                  className={`h-1.5 rounded-full ${model.color} transition-all duration-300`}
+                                  style={{
+                                    width: `${Math.min(tac.score * 100, 100)}%`,
+                                  }}
+                                />
+                              </div>
+                            )}
+                          </div>
+                          <div className="w-12 flex-shrink-0 text-right">
+                            {tac.error && tac.error !== "null" ? (
+                              <span className="text-xs font-mono text-red-400">--</span>
+                            ) : (
+                              <span className="text-xs font-mono text-foreground">{tac.score.toFixed(2)}</span>
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )
+          })}
+
+          <div className="text-xs text-muted-foreground space-y-2 mt-6">
+            <p>
+              <strong>Rankings</strong> are based on average scores from ChemBench-Discovery, sorted from highest to
+              lowest.
+            </p>
+            <p>
+              <strong>Click on any model</strong> to expand and view individual TAC test scores.
+            </p>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="questions" className="space-y-2 mt-4">
+          {questionStats.map((question) => (
+            <div key={question.name} className="bg-card/50 rounded-lg border border-border p-4">
+              <div className="flex items-center space-x-4">
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-foreground font-medium font-mono">{question.name}</span>
+                    <span className="text-foreground font-mono text-sm ml-4">
+                      {question.correctCount}/{question.totalCount}
+                    </span>
+                  </div>
+
+                  <div className="w-full bg-gray-500 dark:bg-gray-800 rounded-full h-2 mb-3">
                     <div
-                      className={`h-2 rounded-full ${model.color} transition-all duration-500`}
+                      className="h-2 rounded-full bg-emerald-500 transition-all duration-500"
                       style={{
-                        width: `${Math.min(model.score, 100)}%`,
+                        width: `${question.percentage}%`,
                       }}
                     />
                   </div>
-                </div>
-              </div>
 
-              {isExpanded && (
-                <div className="px-4 pb-4 border-t border-border/50">
-                  <div className="pt-4 space-y-3">
-                    <h4 className="text-sm font-medium text-muted-foreground mb-3">Individual TAC Scores</h4>
-                    {model.tacScores.map((tac) => (
-                      <div key={tac.name} className="flex items-center space-x-3">
-                        <div className="w-20 flex-shrink-0">
-                          <span className="text-xs font-mono text-muted-foreground">{tac.name}</span>
-                        </div>
-                        <div className="flex-1">
-                          {tac.error && tac.error !== "null" ? (
-                            <div className="text-red-400 text-xs font-medium">{tac.error}</div>
-                          ) : (
-                            <div className="w-full bg-gray-500 dark:bg-gray-800 rounded-full h-1.5">
-                              <div
-                                className={`h-1.5 rounded-full ${model.color} transition-all duration-300`}
-                                style={{
-                                  width: `${Math.min(tac.score * 100, 100)}%`,
-                                }}
-                              />
-                            </div>
-                          )}
-                        </div>
-                        <div className="w-12 flex-shrink-0 text-right">
-                          {tac.error && tac.error !== "null" ? (
-                            <span className="text-xs font-mono text-red-400">--</span>
-                          ) : (
-                            <span className="text-xs font-mono text-foreground">{tac.score.toFixed(2)}</span>
-                          )}
-                        </div>
-                      </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    {question.modelResults.map((result) => (
+                      <Badge
+                        key={result.modelName}
+                        variant={result.success ? "default" : "destructive"}
+                        className={`text-xs px-2 py-0.5 ${
+                          result.success
+                            ? "bg-green-500/20 text-green-400 hover:bg-green-500/30 border-green-500/30"
+                            : "bg-red-500/20 text-red-400 hover:bg-red-500/30 border-red-500/30"
+                        }`}
+                      >
+                        {result.modelName}
+                      </Badge>
                     ))}
                   </div>
                 </div>
-              )}
+              </div>
             </div>
-          )
-        })}
-      </div>
+          ))}
 
-      <div className="text-xs text-muted-foreground space-y-2">
-        <p>
-          <strong>Rankings</strong> are based on average scores from ChemBench-Discovery, sorted from highest to lowest.
-        </p>
-        <p>
-          <strong>Click on any model</strong> to expand and view individual TAC test scores.
-        </p>
-      </div>
+          <div className="text-xs text-muted-foreground space-y-2 mt-6">
+            <p>
+              <strong>Questions</strong> are sorted by TAC number and show how many models successfully solved each
+              problem.
+            </p>
+            <p>
+              <strong>Success rate</strong> is calculated as the number of models with score {">"} 0 and no errors.
+            </p>
+          </div>
+        </TabsContent>
+      </Tabs>
     </div>
   )
 }
