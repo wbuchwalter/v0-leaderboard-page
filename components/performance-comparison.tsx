@@ -216,7 +216,14 @@ export function PerformanceComparison() {
         percentage: stats.total > 0 ? (stats.correct / stats.total) * 100 : 0,
         modelResults: stats.modelResults,
       }))
-      .sort((a, b) => b.percentage - a.percentage)
+      .sort((a, b) => {
+        // Primary sort: by percentage (highest first)
+        const percentageDiff = b.percentage - a.percentage
+        if (percentageDiff !== 0) return percentageDiff
+
+        // Secondary sort: by correct count (highest first) to break ties
+        return b.correctCount - a.correctCount
+      })
 
     return questionStats
   }, [])
