@@ -200,8 +200,7 @@ export function PerformanceComparison() {
         }
         const stats = questionMap.get(tac.name)!
         stats.total++
-        // Count as correct if score > 0 and no error
-        const isSuccess = tac.score > 0 && (!tac.error || tac.error === "null")
+        const isSuccess = tac.score >= 0.75 && (!tac.error || tac.error === "null")
         if (isSuccess) {
           stats.correct++
         }
@@ -553,7 +552,7 @@ scores:
               problem.
             </p>
             <p>
-              <strong>Success rate</strong> is calculated as the number of models with score {">"} 0 and no errors.
+              <strong>Success rate</strong> is calculated as the number of models with score ≥ 75% and no errors.
             </p>
           </div>
         </TabsContent>
