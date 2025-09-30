@@ -208,7 +208,6 @@ export function PerformanceComparison() {
       })
     })
 
-    // Convert to array and sort by question name
     const questionStats: QuestionStats[] = Array.from(questionMap.entries())
       .map(([name, stats]) => ({
         name,
@@ -217,12 +216,7 @@ export function PerformanceComparison() {
         percentage: stats.total > 0 ? (stats.correct / stats.total) * 100 : 0,
         modelResults: stats.modelResults,
       }))
-      .sort((a, b) => {
-        // Sort by TAC number
-        const aNum = Number.parseInt(a.name.replace("TAC-", ""))
-        const bNum = Number.parseInt(b.name.replace("TAC-", ""))
-        return aNum - bNum
-      })
+      .sort((a, b) => b.percentage - a.percentage)
 
     return questionStats
   }, [])
@@ -548,7 +542,7 @@ scores:
 
           <div className="text-xs text-muted-foreground space-y-2 mt-6">
             <p>
-              <strong>Questions</strong> are sorted by TAC number and show how many models successfully solved each
+              <strong>Questions</strong> are sorted by success rate and show how many models successfully solved each
               problem.
             </p>
             <p>
