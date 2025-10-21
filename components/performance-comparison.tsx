@@ -48,7 +48,11 @@ const colors = [
   "bg-red-400",
 ]
 
-export function PerformanceComparison() {
+interface PerformanceComparisonProps {
+  dataUrl: string
+}
+
+export function PerformanceComparison({ dataUrl }: PerformanceComparisonProps) {
   const [modelResults, setModelResults] = useState<ModelResult[]>([])
   const [isDragOver, setIsDragOver] = useState(false)
   const [hasData, setHasData] = useState(false)
@@ -235,12 +239,9 @@ export function PerformanceComparison() {
         setError(null)
 
         const timestamp = Date.now()
-        const response = await fetch(
-          `https://pub-d29d89e1f30d4e34be99a6673b3ec29a.r2.dev/latest_scores.yaml?t=${timestamp}`,
-          {
-            cache: "no-cache",
-          },
-        )
+        const response = await fetch(`${dataUrl}?t=${timestamp}`, {
+          cache: "no-cache",
+        })
 
         if (!response.ok) {
           throw new Error(`Failed to fetch data: ${response.status}`)
@@ -258,7 +259,7 @@ export function PerformanceComparison() {
     }
 
     fetchData()
-  }, [parseYAML])
+  }, [parseYAML, dataUrl]) // Added dataUrl to dependency array
 
   const handleDrop = useCallback(
     (e: React.DragEvent) => {
