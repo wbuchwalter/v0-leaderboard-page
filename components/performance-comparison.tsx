@@ -82,6 +82,15 @@ export function PerformanceComparison({ dataUrl }: PerformanceComparisonProps) {
 
       // Detect start of new model (any line starting with "- " that's not a TAC score)
       if (trimmedLine.startsWith("- ") && !trimmedLine.includes("TAC-")) {
+        // Save pending TAC score before saving the model
+        if (currentTACName && currentTACScore !== null) {
+          currentModel.tacScores.push({
+            name: currentTACName,
+            score: currentTACScore,
+            error: currentTACError,
+          })
+        }
+
         // Save previous model if it has both name and score
         if (currentModel.name && currentModel.score !== undefined) {
           results.push({
